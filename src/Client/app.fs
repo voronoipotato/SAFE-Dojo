@@ -23,7 +23,8 @@ open Shared
 /// The different elements of the completed report.
 type Report =
     { Location : LocationResponse
-      Crimes : CrimeResponse array }
+      Crimes : CrimeResponse array 
+      Weather: WeatherResponse}
 
 type ServerState = Idle | Loading | ServerError of string
 
@@ -32,7 +33,8 @@ type Model =
     { Postcode : string
       ValidationError : string option
       ServerState : ServerState
-      Report : Report option }
+      Report : Report option 
+      }
 
 /// The different types of messages in the system.
 type Msg =
@@ -46,16 +48,17 @@ let init () =
     { Postcode = null
       Report = None
       ValidationError = None
-      ServerState = Idle }, Cmd.ofMsg (PostcodeChanged "")
+      ServerState = Idle
+      }, Cmd.ofMsg (PostcodeChanged "")
 
 let getResponse postcode = promise {
     let! location = Fetch.fetchAs<LocationResponse> (sprintf "/api/distance/%s" postcode) []
     let! crimes = Fetch.tryFetchAs<CrimeResponse array> (sprintf "api/crime/%s" postcode) [] |> Promise.map (Result.defaultValue [||])
-    
+    let! weather = Fetch.fetchAs<WeatherResponse> (sprintf "/api/weather/%s" postcode) []
     (* Task 4.5 WEATHER: Fetch the weather from the API endpoint you created.
        Then, save its value into the Report below. You'll need to add a new
        field to the Report type first, though! *)
-    return { Location = location; Crimes = crimes } }
+    return { Location = location; Crimes = crimes; Weather = weather } }
  
 /// The update function knows how to update the model given a message.
 let update msg model =
@@ -110,8 +113,7 @@ module ViewParts =
         basicTile "Map" [ Tile.Size Tile.Is12 ] [
             iframe [
                 Style [ Height 410; Width 810 ]
-                (* Task 3.1 MAPS: Use the getBingMapUrl function to build a valid maps URL using the supplied LatLong.
-                   You can use it to add a Src attribute to this iframe. *)
+                Src (getBingMapUrl latLong)
             ] [ ]
         ]
 
@@ -127,9 +129,7 @@ module ViewParts =
                         ]
                         Level.title [ ] [
                             Heading.h3 [ Heading.Is4; Heading.Props [ Style [ Width "100%" ] ] ] [
-                                (* Task 4.8 WEATHER: Get the temperature from the given weather report
-                                   and display it here instead of an empty string. *)
-                                str ""
+                                str (sprintf "%3.2f° C" weatherReport.AverageTemperature)
                             ]
                         ]
                     ]
@@ -141,7 +141,7 @@ module ViewParts =
             div [ ] [
                 Heading.h3 [ ] [ str model.Location.Location.Town ]
                 Heading.h4 [ ] [ str model.Location.Location.Region ]
-                Heading.h4 [ ] [ sprintf "%.1fKM to London" model.Location.DistanceToLondon |> str ]
+                Heading.h4 [ ] [ sprintf "%.1fKM to NYC" model.Location.DistanceToLondon |> str ]
             ]
         ]
              
@@ -210,6 +210,7 @@ let view model dispatch =
                     Tile.ancestor [ ] [
                         Tile.parent [ Tile.IsVertical; Tile.Size Tile.Is4 ] [ 
                             locationTile model
+                            weatherTile model.Weather
                             (* Task 4.6 WEATHER: Generate the view code for the weather tile
                                using the weatherTile function, supplying the weather report
                                from the model, and include it here as part of the list *)
@@ -217,7 +218,8 @@ let view model dispatch =
                         Tile.parent [ Tile.Size Tile.Is8 ] [
                             crimeTile model.Crimes
                         ]                   
-                  ]        
+                    ]
+  
         ]
 
         br [ ]

@@ -10,11 +10,19 @@ module GeoLocation =
     type PostcodesIO = JsonProvider<"http://api.postcodes.io/postcodes/EC2A4NE">
 
     let getLocation postcode = task {
-        let! postcode = postcode |> sprintf "http://api.postcodes.io/postcodes/%s" |> PostcodesIO.AsyncLoad
-        return
-            { LatLong = { Latitude = float postcode.Result.Latitude; Longitude = float postcode.Result.Longitude }
-              Town = postcode.Result.AdminDistrict
-              Region = postcode.Result.Nuts } }
+        match postcode with 
+        | "27614" -> 
+            return {
+                LatLong = {Latitude = 35.779591; Longitude =  -78.638176 }
+                Town = "Raleigh"
+                Region = "North Carolina"
+            }
+        | _ -> 
+            let! postcode = postcode |> sprintf "http://api.postcodes.io/postcodes/%s" |> PostcodesIO.AsyncLoad
+            return
+                { LatLong = { Latitude = float postcode.Result.Latitude; Longitude = float postcode.Result.Longitude }
+                  Town = postcode.Result.AdminDistrict
+                  Region = postcode.Result.Nuts } }
 
     let getDistanceBetweenPositions pos1 pos2 =
         let lat1, lng1 = pos1.Latitude, pos1.Longitude
@@ -37,6 +45,7 @@ module Crime =
         ||> sprintf "https://data.police.uk/api/crimes-street/all-crime?lat=%f&lng=%f"
         |> PoliceUkCrime.AsyncLoad
         |> Async.StartAsTask
+
 [<AutoOpen>]
 module Weather =
     type MetaWeatherSearch = JsonProvider<"https://www.metaweather.com/api/location/search/?lattlong=51.5074,0.1278">
@@ -51,3 +60,4 @@ module Weather =
             bestLocationId
             |> sprintf "https://www.metaweather.com/api/location/%d"
             |> MetaWeatherLocation.AsyncLoad }
+//"35.785511,-78.642670"
